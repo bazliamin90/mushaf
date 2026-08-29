@@ -1,0 +1,15 @@
+{
+  "name": "Mushaf V1h",
+  "short_name": "Mushaf",
+  "description": "Offline Quran reader — QPC V1, Madinah Mushaf 1405H print",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#DFDBE5",
+  "theme_color": "#2E4A3E",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
