@@ -573,9 +573,30 @@ body.wbw-on .type-bismillah .wbw-label { display: none; }
 }
 
 .ayah-jump { grid-column: 1; justify-self: start; }
-.page-badge { grid-column: 2; justify-self: center; }
+.page-nav-group { grid-column: 2; justify-self: center; display: flex; align-items: center; gap: 6px; }
 .page-range { grid-column: 3; justify-self: end; }
 .jump-status { grid-column: 1 / -1; justify-self: start; }
+
+.history-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-mid);
+  background: var(--parchment);
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
+}
+.history-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.history-btn:active:not(:disabled) { background: var(--accent-light); color: var(--accent); }
 
 .page-badge {
   font-family: 'DM Sans', sans-serif;
@@ -613,14 +634,14 @@ body.wbw-on .type-bismillah .wbw-label { display: none; }
   overflow: hidden;
 }
 .ayah-jump-input {
-  width: 44px;
+  width: 26px;
   background: transparent;
   border: none;
   outline: none;
   color: var(--ink);
-  padding: 5px 4px;
+  padding: 5px 2px;
   font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   text-align: center;
   -moz-appearance: textfield;
@@ -631,7 +652,7 @@ body.wbw-on .type-bismillah .wbw-label { display: none; }
 .ayah-jump-input::placeholder { color: var(--ink-dim); font-weight: 400; }
 .ayah-jump-sep {
   color: var(--ink-dim);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   padding: 0 1px;
 }
@@ -639,8 +660,8 @@ body.wbw-on .type-bismillah .wbw-label { display: none; }
   background: var(--fill-bg);
   border: none;
   color: #F4F1EA;
-  padding: 6px 10px;
-  font-size: 12px;
+  padding: 6px 8px;
+  font-size: 11px;
   line-height: 1;
   cursor: pointer;
   transition: opacity 0.15s;
@@ -1316,6 +1337,7 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
   #nav-toggle:hover { opacity: 0.85; }
   .card-nav-btn:hover:not(:disabled) { background: var(--parchment); color: var(--accent); opacity: 1; }
   .trans-copy-btn:hover { background: var(--accent-light); color: var(--accent); }
+  .history-btn:hover:not(:disabled) { background: var(--accent-light); color: var(--accent); }
   .topics-panel-btn:hover { color: var(--ink); background: var(--parchment); }
   .topic-card-wiki:hover { text-decoration: underline; }
   .topic-detail-ayah:hover { background: var(--accent-light); }
@@ -1408,12 +1430,16 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
   <div class="mushaf-card">
     <div class="card-topbar">
       <div class="ayah-jump">
-        <input type="number" class="ayah-jump-input" id="jump-surah" placeholder="Surah" min="1" max="114" />
+        <input type="number" class="ayah-jump-input" id="jump-surah" placeholder="Srh" min="1" max="114" />
         <span class="ayah-jump-sep">:</span>
-        <input type="number" class="ayah-jump-input" id="jump-ayah" placeholder="Ayah" min="1" />
+        <input type="number" class="ayah-jump-input" id="jump-ayah" placeholder="Ayt" min="1" />
         <button class="ayah-jump-btn" id="jump-go-btn" title="Pergi ke ayat">&#8594;</button>
       </div>
-      <span class="page-badge" id="page-label">page 001</span>
+      <span class="page-nav-group">
+        <span class="page-badge" id="page-label">page 001</span>
+        <button class="history-btn" id="history-back-btn" disabled title="Kembali ke halaman terakhir dilawati">↩</button>
+        <button class="history-btn" id="history-next-btn" disabled title="Ke hadapan dalam sejarah lawatan">↪</button>
+      </span>
       <span class="page-range" id="page-range"></span>
       <span class="jump-status" id="jump-status"></span>
     </div>
@@ -1613,6 +1639,40 @@ const cardNextBtn = document.getElementById("card-next-btn");
 cardPrevBtn.addEventListener("click", () => { if (currentPage > 1)   goToPage(currentPage - 1); });
 cardNextBtn.addEventListener("click", () => { if (currentPage < 604) goToPage(currentPage + 1); });
 
+/* ── Visit history (like a browser's Back/Forward) ──
+   Distinct from the page-turn arrows above: this remembers every page you've
+   actually navigated *to* (via search, jump-to-ayah, topics, etc.) so you can
+   retrace your steps — e.g. 100 → 250 → 300, then Back: 300 → 250 → 100. */
+let navHistory = [];
+let navIndex = -1;
+let suppressHistoryPush = false;
+const historyBackBtn = document.getElementById("history-back-btn");
+const historyNextBtn = document.getElementById("history-next-btn");
+
+function updateHistoryButtons() {
+  historyBackBtn.disabled = navIndex <= 0;
+  historyNextBtn.disabled = navIndex >= navHistory.length - 1;
+}
+
+function historyBack() {
+  if (navIndex <= 0) return;
+  navIndex--;
+  suppressHistoryPush = true;
+  goToPage(navHistory[navIndex]);
+  suppressHistoryPush = false;
+}
+
+function historyForward() {
+  if (navIndex >= navHistory.length - 1) return;
+  navIndex++;
+  suppressHistoryPush = true;
+  goToPage(navHistory[navIndex]);
+  suppressHistoryPush = false;
+}
+
+historyBackBtn.addEventListener("click", historyBack);
+historyNextBtn.addEventListener("click", historyForward);
+
 wtToggle.addEventListener("change", () => {
   wordTouchEnabled = wtToggle.checked;
   document.body.classList.toggle("wt-on", wordTouchEnabled);
@@ -1629,6 +1689,13 @@ transToggle.addEventListener("change", () => {
 });
 
 function goToPage(num) {
+  if (!suppressHistoryPush && navHistory[navIndex] !== num) {
+    navHistory = navHistory.slice(0, navIndex + 1); // drop any "redo" branch on a fresh visit
+    navHistory.push(num);
+    navIndex = navHistory.length - 1;
+  }
+  updateHistoryButtons();
+
   currentPage = num;
   saveLastPage(num);
   pageInput.value = num;
