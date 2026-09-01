@@ -1068,7 +1068,7 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
   border-radius: 2px;
 }
 
-/* ── In-card prev/next buttons ── */
+/* ── In-card prev/next buttons (unchanged since first added) ── */
 .card-nav-btn {
   position: absolute;
   top: 50%;
@@ -1111,6 +1111,35 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
   left: 0;
   border-left: none;
   border-radius: 0 6px 6px 0;
+}
+
+/* Vertical preview labels — shows the surah:ayah the adjacent page starts/ends
+   on. Positioned independently of the buttons via calc(), anchored to the
+   buttons' known geometry (centered, 64px tall) — next label sits just above
+   the next button, prev label just below the prev button. Uses writing-mode
+   instead of a rotated transform so its real layout height is what the
+   browser measures, which avoids clipping inside #page-render's overflow:hidden. */
+.edge-label {
+  position: absolute;
+  z-index: 6;
+  pointer-events: none;
+  writing-mode: vertical-rl;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 800;
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  white-space: nowrap;
+  text-shadow: 0 0 3px rgba(255,255,255,0.9), 0 0 6px rgba(255,255,255,0.6);
+}
+.edge-label-next {
+  left: 6px;
+  top: calc(50% - 32px - 8px);
+  transform: translateY(-100%);
+}
+.edge-label-prev {
+  right: 6px;
+  top: calc(50% + 32px + 8px);
 }
   .shell { padding: 34px 12px 56px; }
   #page-render { padding: 10px 8px; }
@@ -1446,6 +1475,8 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
 
     <div id="page-render">
       <div id="zoom-badge"></div>
+      <div class="edge-label edge-label-next" id="edge-label-next"><span id="edge-label-next-text"></span></div>
+      <div class="edge-label edge-label-prev" id="edge-label-prev"><span id="edge-label-prev-text"></span></div>
       <button class="card-nav-btn card-nav-prev" id="card-prev-btn" title="Halaman sebelum" aria-label="Halaman sebelum">&#8249;</button>
       <button class="card-nav-btn card-nav-next" id="card-next-btn" title="Halaman berikut" aria-label="Halaman berikut">&#8250;</button>
       <div id="zoom-content">
@@ -1705,7 +1736,50 @@ function goToPage(num) {
   if (cardNextBtn) cardNextBtn.disabled = num >= 604;
   syncSurahSelect(num);
   loadPage(num);
+  updateEdgeLabels(num);
 }
+
+async function updateEdgeLabels(num) {
+  /* Shows a small rotated label along each edge of the mushaf card previewing
+     where the adjacent page picks up/leaves off — e.g. "An-Nahl: 118" on the
+     right (previous page's last ayah) and "Al-Isra: 1" on the left (next
+     page's first ayah), matching the RTL reading direction (prev = right). */
+  const nextLabelEl = document.getElementById("edge-label-next-text");
+  const prevLabelEl = document.getElementById("edge-label-prev-text");
+  if (!nextLabelEl || !prevLabelEl) return;
+
+  const requestId = ++edgeLabelRequestId;
+
+  function labelFor(verseKey) {
+    if (!verseKey) return "";
+    const [s, a] = verseKey.split(":").map(Number);
+    const meta = SURAHS.find(x => x[0] === s);
+    return meta ? `${meta[2]}: ${a}` : "";
+  }
+
+  if (num > 1) {
+    try {
+      const prevVerses = await fetchVerses(num - 1);
+      if (requestId !== edgeLabelRequestId) return; // a newer page load superseded this
+      const lastV = prevVerses[prevVerses.length - 1];
+      prevLabelEl.textContent = labelFor(lastV && lastV.verse_key);
+    } catch (e) { prevLabelEl.textContent = ""; }
+  } else {
+    prevLabelEl.textContent = "";
+  }
+
+  if (num < 604) {
+    try {
+      const nextVerses = await fetchVerses(num + 1);
+      if (requestId !== edgeLabelRequestId) return;
+      const firstV = nextVerses[0];
+      nextLabelEl.textContent = labelFor(firstV && firstV.verse_key);
+    } catch (e) { nextLabelEl.textContent = ""; }
+  } else {
+    nextLabelEl.textContent = "";
+  }
+}
+let edgeLabelRequestId = 0;
 
 function surahForPage(page) {
   // SURAHS is ordered by surah number, and start pages are non-decreasing,
