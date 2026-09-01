@@ -50,7 +50,7 @@ body {
 /* ── Shell ── */
 .shell {
   width: 100%; max-width: 560px;
-  padding: 68px 20px 72px;
+  padding: 40px 20px 72px;
   display: flex; flex-direction: column; gap: 14px;
 }
 
@@ -390,7 +390,7 @@ header { text-align: center; padding-bottom: 4px; }
 /* ── Controls bar ── */
 .controls {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   align-items: center;
   flex-wrap: nowrap;
   direction: ltr;
@@ -414,7 +414,7 @@ header { text-align: center; padding-bottom: 4px; }
   border: none;
   border-right: 1.5px solid var(--border);
   color: var(--ink-mid);
-  padding: 3px 9px;
+  padding: 3px 6px;
   font-size: 13px;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
@@ -429,11 +429,11 @@ header { text-align: center; padding-bottom: 4px; }
   background: transparent;
   border: none;
   color: var(--ink);
-  padding: 3px 4px;
-  font-size: 13px;
+  padding: 3px 2px;
+  font-size: 12px;
   font-family: 'DM Sans', sans-serif;
   font-weight: 600;
-  width: 38px;
+  width: 30px;
   text-align: center;
   outline: none;
   -moz-appearance: textfield;
@@ -449,12 +449,12 @@ header { text-align: center; padding-bottom: 4px; }
   border: 1.5px solid var(--fill-bg);
   color: #F4F1EA;
   border-radius: var(--radius-btn);
-  padding: 3px 11px;
+  padding: 3px 8px;
   font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   cursor: pointer;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   transition: opacity 0.15s;
   flex-shrink: 0;
 }
@@ -475,20 +475,20 @@ header { text-align: center; padding-bottom: 4px; }
 .toggle-wrap {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
+  gap: 3px;
+  padding: 3px 6px;
   border-right: 1px solid var(--border-light);
 }
 .toggle-wrap:last-child { border-right: none; }
 .toggle-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
   color: var(--ink-mid);
   white-space: nowrap;
   direction: ltr;
 }
-.toggle { position: relative; width: 28px; height: 15px; cursor: pointer; flex-shrink: 0; }
+.toggle { position: relative; width: 24px; height: 13px; cursor: pointer; flex-shrink: 0; }
 .toggle input { opacity: 0; width: 0; height: 0; }
 .slider {
   position: absolute; inset: 0;
@@ -499,7 +499,7 @@ header { text-align: center; padding-bottom: 4px; }
 .slider::before {
   content: '';
   position: absolute;
-  width: 10px; height: 10px;
+  width: 9px; height: 9px;
   left: 2px; top: 2px;
   background: white;
   border-radius: 50%;
@@ -507,7 +507,7 @@ header { text-align: center; padding-bottom: 4px; }
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 .toggle input:checked + .slider { background: var(--accent); }
-.toggle input:checked + .slider::before { transform: translateX(13px); }
+.toggle input:checked + .slider::before { transform: translateX(11px); }
 .toggle input:checked + .slider-wbw { background: #0077cc; }
 
 /* ── Word-by-word interlinear ── */
@@ -1112,7 +1112,7 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
   border-left: none;
   border-radius: 0 6px 6px 0;
 }
-  .shell { padding: 58px 12px 56px; }
+  .shell { padding: 34px 12px 56px; }
   #page-render { padding: 10px 8px; }
   .sticky-controls { padding: 5px 10px; }
   .surah-select-wrap, .search-wrap, .topic-item-en { font-size: 13px; font-weight: 500; color: var(--ink); }
@@ -2929,7 +2929,7 @@ jumpGoBtn.addEventListener("click", jumpToAyah);
 (function() {
   const nav       = document.querySelector(".sticky-controls");
   const toggleBtn = document.getElementById("nav-toggle");
-  let navVisible  = true;
+  let navVisible  = false;
 
   // Measure navbar height once it's rendered, set toggle top accordingly
   function navH() { return nav.getBoundingClientRect().height || 48; }
@@ -2957,9 +2957,10 @@ jumpGoBtn.addEventListener("click", jumpToAyah);
     else showNav();
   });
 
-  // Set initial toggle position after layout
+  // Start collapsed by default
+  nav.classList.add("nav-hidden");
   requestAnimationFrame(() => {
-    setToggleTop(true);
+    setToggleTop(false);
   });
 })();
 
