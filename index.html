@@ -460,6 +460,69 @@ header { text-align: center; padding-bottom: 4px; }
 }
 .go-btn:active { transform: scale(0.97); }
 
+.hl-btn {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font-size: 10px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  flex-shrink: 0;
+}
+.hl-btn:active { transform: scale(0.97); }
+.hl-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.hl-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.highlight-bar {
+  display: none;
+  position: fixed;
+  top: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+}
+.highlight-bar.visible { display: flex; }
+.hl-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.hl-swatch.active {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.hl-eraser {
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--ink-mid);
+  border-radius: 6px;
+}
+
 /* Toggles — grouped into one pill */
 .toggle-group {
   display: flex;
@@ -1367,6 +1430,8 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
   .card-nav-btn:hover:not(:disabled) { background: var(--parchment); color: var(--accent); opacity: 1; }
   .trans-copy-btn:hover { background: var(--accent-light); color: var(--accent); }
   .history-btn:hover:not(:disabled) { background: var(--accent-light); color: var(--accent); }
+  .hl-btn:hover:not(:disabled):not(.active) { background: var(--parchment); }
+  .hl-swatch:hover:not(.active) { opacity: 0.85; }
   .topics-panel-btn:hover { color: var(--ink); background: var(--parchment); }
   .topic-card-wiki:hover { text-decoration: underline; }
   .topic-detail-ayah:hover { background: var(--accent-light); }
@@ -1386,13 +1451,14 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
   <div class="controls">
     <!-- Page nav group -->
     <div class="ctrl-page">
-      <button class="nav-btn" id="prev-btn" title="Previous page">&#8249;</button>
       <input type="number" class="page-input" id="page-input" min="1" max="604" value="1" />
-      <button class="nav-btn" id="next-btn" title="Next page">&#8250;</button>
     </div>
     <button class="go-btn" id="go-btn">Go</button>
 
     <div class="toggle-group">
+      <div class="toggle-wrap hl-wrap">
+        <button class="hl-btn" id="hl-btn" title="Penanda (Highlighter)" aria-label="Penanda">🖍</button>
+      </div>
       <div class="toggle-wrap">
         <span class="toggle-label">WT</span>
         <label class="toggle">
@@ -1419,6 +1485,15 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
 </div>
 
 <div class="shell">
+
+  <div class="highlight-bar" id="highlight-bar">
+    <button class="hl-swatch hl-eraser" id="hl-eraser" title="Padam penanda">✕</button>
+    <button class="hl-swatch active" data-color="#FFF176" style="background:#FFF176" title="Kuning"></button>
+    <button class="hl-swatch" data-color="#AED581" style="background:#AED581" title="Hijau"></button>
+    <button class="hl-swatch" data-color="#81D4FA" style="background:#81D4FA" title="Biru"></button>
+    <button class="hl-swatch" data-color="#F48FB1" style="background:#F48FB1" title="Pink"></button>
+    <button class="hl-swatch" data-color="#FFB74D" style="background:#FFB74D" title="Oren"></button>
+  </div>
 
   <p class="subtitle">QPC V1 · Madinah Mushaf, 1405H print</p>
 
@@ -1590,8 +1665,6 @@ const jumpAyahInput  = document.getElementById("jump-ayah");
 const jumpGoBtn      = document.getElementById("jump-go-btn");
 const jumpStatus     = document.getElementById("jump-status");
 const goBtn        = document.getElementById("go-btn");
-const prevBtn      = document.getElementById("prev-btn");
-const nextBtn      = document.getElementById("next-btn");
 const transToggle  = document.getElementById("trans-toggle");
 const wtToggle     = document.getElementById("wt-toggle");
 let wordTouchEnabled = false; // default off — tapping words does nothing until enabled
@@ -1662,8 +1735,6 @@ goBtn.addEventListener("click", () => {
   else pageInput.value = currentPage;
 });
 pageInput.addEventListener("keydown", e => { if (e.key === "Enter") goBtn.click(); });
-prevBtn.addEventListener("click", () => { if (currentPage > 1) goToPage(currentPage - 1); });
-nextBtn.addEventListener("click", () => { if (currentPage < 604) goToPage(currentPage + 1); });
 
 const cardPrevBtn = document.getElementById("card-prev-btn");
 const cardNextBtn = document.getElementById("card-next-btn");
@@ -1704,9 +1775,64 @@ function historyForward() {
 historyBackBtn.addEventListener("click", historyBack);
 historyNextBtn.addEventListener("click", historyForward);
 
+/* ── Highlighter ── */
+const HIGHLIGHTS_KEY = "mushafHighlights";
+let highlights = {};
+try {
+  highlights = JSON.parse(localStorage.getItem(HIGHLIGHTS_KEY) || "{}");
+} catch (e) { highlights = {}; }
+
+function saveHighlights() {
+  try { localStorage.setItem(HIGHLIGHTS_KEY, JSON.stringify(highlights)); } catch (e) { /* storage unavailable — ignore */ }
+}
+
+let highlightModeEnabled = false;
+let eraserMode = false;
+let activeHighlightColor = "#FFF176"; // default: yellow, matches the first swatch marked "active" in HTML
+
+const hlBtn = document.getElementById("hl-btn");
+const highlightBar = document.getElementById("highlight-bar");
+const hlEraserBtn = document.getElementById("hl-eraser");
+const hlSwatches = document.querySelectorAll(".hl-swatch:not(.hl-eraser)");
+
+function setHighlightMode(on) {
+  highlightModeEnabled = on;
+  hlBtn.classList.toggle("active", on);
+  highlightBar.classList.toggle("visible", on);
+  // Mutually exclusive with Word Touch (WT)
+  wtToggle.disabled = on;
+  if (on && wordTouchEnabled) {
+    wordTouchEnabled = false;
+    wtToggle.checked = false;
+    document.body.classList.remove("wt-on");
+  }
+}
+
+hlBtn.addEventListener("click", () => setHighlightMode(!highlightModeEnabled));
+
+hlSwatches.forEach(sw => {
+  sw.addEventListener("click", () => {
+    activeHighlightColor = sw.dataset.color;
+    eraserMode = false;
+    hlSwatches.forEach(s => s.classList.remove("active"));
+    hlEraserBtn.classList.remove("active");
+    sw.classList.add("active");
+  });
+});
+hlEraserBtn.addEventListener("click", () => {
+  eraserMode = true;
+  hlSwatches.forEach(s => s.classList.remove("active"));
+  hlEraserBtn.classList.add("active");
+});
+
 wtToggle.addEventListener("change", () => {
   wordTouchEnabled = wtToggle.checked;
   document.body.classList.toggle("wt-on", wordTouchEnabled);
+  // Mutually exclusive with Highlighter
+  hlBtn.disabled = wordTouchEnabled;
+  if (wordTouchEnabled && highlightModeEnabled) {
+    setHighlightMode(false);
+  }
 });
 
 transToggle.addEventListener("change", () => {
@@ -1730,8 +1856,6 @@ function goToPage(num) {
   currentPage = num;
   saveLastPage(num);
   pageInput.value = num;
-  prevBtn.disabled = num <= 1;
-  nextBtn.disabled = num >= 604;
   if (cardPrevBtn) cardPrevBtn.disabled = num <= 1;
   if (cardNextBtn) cardNextBtn.disabled = num >= 604;
   syncSurahSelect(num);
@@ -2052,6 +2176,10 @@ async function renderPage(data) {
             lbl.textContent = wbwText;
             span.appendChild(lbl);
           }
+          // Restore any saved highlight for this word
+          if (highlights[word.loc]) {
+            span.style.backgroundColor = highlights[word.loc];
+          }
         }
       } else {
         span.textContent = word.char; // surah name / bismillah — plain Unicode text
@@ -2060,10 +2188,24 @@ async function renderPage(data) {
       span.addEventListener("mouseleave", () => {
         // tooltip removed in T0f
       });
-      // Tap/click a word to see its topics — only when Word Touch (WT) is enabled
+      // Tap/click a word: either paint/erase a highlight (HL mode) or open
+      // topics (WT mode) — the two are mutually exclusive, enforced by the
+      // toggle wiring below, so only one branch is ever "live" at a time.
       if ((word.type === "word" || word.type === "end") && word.verse_key) {
         span.classList.add("tappable");
         span.addEventListener("click", () => {
+          if (highlightModeEnabled) {
+            if (!word.loc) return;
+            if (eraserMode) {
+              delete highlights[word.loc];
+              span.style.backgroundColor = "";
+            } else {
+              highlights[word.loc] = activeHighlightColor;
+              span.style.backgroundColor = activeHighlightColor;
+            }
+            saveHighlights();
+            return;
+          }
           if (wordTouchEnabled) openTopicsPanel(word.verse_key, span);
         });
       }
@@ -3040,7 +3182,6 @@ jumpGoBtn.addEventListener("click", jumpToAyah);
 
 const initialPage = loadLastPage();
 lastPage = initialPage; // avoid a slide animation on first load
-prevBtn.disabled = initialPage <= 1;
 if (cardPrevBtn) cardPrevBtn.disabled = initialPage <= 1;
 goToPage(initialPage);
 
