@@ -1480,6 +1480,12 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
           <span class="slider slider-wbw"></span>
         </label>
       </div>
+      <div class="toggle-wrap hl-wrap">
+        <button class="hl-btn" id="clear-data-btn" title="Padam data luar talian" aria-label="Padam data luar talian">❌</button>
+      </div>
+      <div class="toggle-wrap hl-wrap">
+        <button class="hl-btn" id="save-image-btn" title="Tangkap skrin halaman" aria-label="Tangkap skrin halaman">💾</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1823,6 +1829,195 @@ hlEraserBtn.addEventListener("click", () => {
   eraserMode = true;
   hlSwatches.forEach(s => s.classList.remove("active"));
   hlEraserBtn.classList.add("active");
+});
+
+/* ── Clear offline data / "uninstall" ── */
+const clearDataBtn = document.getElementById("clear-data-btn");
+clearDataBtn.addEventListener("click", async () => {
+  const sure = confirm(
+    "Padam semua data luar talian (cache halaman, font, terjemahan, ayat yang ditanda) dari peranti ini?\n\n" +
+    "Tindakan ini tidak boleh dibatalkan. Anda perlu berada dalam talian semula untuk memuat turun data ini sekali lagi."
+  );
+  if (!sure) return;
+
+  clearDataBtn.disabled = true;
+  clearDataBtn.textContent = "…";
+
+  try {
+    // 1. Clear localStorage (last page read, saved highlights)
+    try {
+      localStorage.removeItem(LAST_PAGE_KEY);
+      localStorage.removeItem(HIGHLIGHTS_KEY);
+    } catch (e) { /* storage unavailable — ignore */ }
+
+    // 2. Clear all Cache Storage (the offline-precached app + Quran data)
+    if ("caches" in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+    }
+
+    // 3. Unregister the service worker so it stops serving cached files
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(reg => reg.unregister()));
+    }
+
+    alert("Data luar talian telah dipadam. Halaman akan dimuat semula.");
+    location.reload();
+  } catch (e) {
+    console.warn("Failed to clear offline data:", e);
+    alert("Sesuatu tidak kena semasa memadam data. Sila cuba lagi.");
+    clearDataBtn.disabled = false;
+    clearDataBtn.textContent = "❌";
+  }
+});
+
+/* ── Screenshot the mushaf card ──
+   Uses a real screen capture (getDisplayMedia) instead of a DOM-to-canvas
+   library like html2canvas — that approach re-renders text itself and
+   garbles the mushaf's custom Arabic glyph fonts. A genuine screen capture
+   grabs actual rendered pixels, so the text comes out exactly as shown,
+   including any active highlights or word-by-word labels. If the card is
+   taller than the screen, this scrolls through it and stitches the pieces
+   into one image. */
+const saveImageBtn = document.getElementById("save-image-btn");
+
+async function captureCardScreenshot() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+    alert(
+      "Peranti/pelayar ini tidak menyokong tangkapan skrin dalam apl. " +
+      "Sila gunakan ciri 'screenshot' (atau 'scroll capture') bawaan telefon anda."
+    );
+    return;
+  }
+
+  const card = document.querySelector(".mushaf-card");
+  if (!card) return;
+
+  // Hide anything that floats/overlays on top of the page — since this is a
+  // genuine pixel capture (not a DOM query), anything visually overlapping
+  // the card's rect would otherwise bake itself into the screenshot.
+  const overlaySelectors = [
+    "#nav-toggle", ".sticky-controls", "#highlight-bar", "#topics-panel",
+    "#share-toast", "#offline-progress-banner", "#translation-panel",
+  ];
+  const hiddenEls = [];
+  overlaySelectors.forEach((sel) => {
+    document.querySelectorAll(sel).forEach((el) => {
+      hiddenEls.push([el, el.style.visibility]);
+      el.style.visibility = "hidden";
+    });
+  });
+
+  let stream = null;
+  const originalScrollY = window.scrollY;
+
+  try {
+    stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: 2 },
+      audio: false,
+      preferCurrentTab: true, // Chromium — hints the browser to pre-select "this tab"
+    });
+
+    const video = document.createElement("video");
+    video.srcObject = stream;
+    video.muted = true;
+    await video.play();
+    // Give the stream a moment to deliver its first real frame.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    // Map CSS pixels (window.innerWidth/innerHeight) to the captured
+    // stream's actual pixel dimensions, which may differ (device pixel
+    // ratio, or the user picking a display rather than just the tab).
+    const scaleX = video.videoWidth / window.innerWidth;
+    const scaleY = video.videoHeight / window.innerHeight;
+
+    function grabFrameCanvas() {
+      const c = document.createElement("canvas");
+      c.width = video.videoWidth;
+      c.height = video.videoHeight;
+      c.getContext("2d").drawImage(video, 0, 0);
+      return c;
+    }
+
+    // Card's position/size in *document* coordinates (independent of scroll).
+    const rectAtStart = card.getBoundingClientRect();
+    const cardDocTop = rectAtStart.top + window.scrollY;
+    const cardDocLeft = rectAtStart.left + window.scrollX;
+    const cardWidthCss = card.offsetWidth;
+    const cardHeightCss = card.offsetHeight;
+    const viewportH = window.innerHeight;
+
+    const outCanvas = document.createElement("canvas");
+    outCanvas.width = Math.round(cardWidthCss * scaleX);
+    outCanvas.height = Math.round(cardHeightCss * scaleY);
+    const outCtx = outCanvas.getContext("2d");
+
+    let coveredCss = 0; // how much of the card's height (CSS px) we've captured so far
+    while (coveredCss < cardHeightCss) {
+      const scrollTarget = cardDocTop + coveredCss;
+      window.scrollTo(0, scrollTarget);
+      // Let layout/paint settle, and the stream catch up, before grabbing a frame.
+      await new Promise((resolve) => setTimeout(resolve, 350));
+
+      const rectNow = card.getBoundingClientRect(); // card's position relative to viewport, right now
+      const frame = grabFrameCanvas();
+
+      // The slice of the card currently visible on screen (CSS px, viewport-relative).
+      const visibleTop = Math.max(rectNow.top, 0);
+      const visibleBottom = Math.min(rectNow.bottom, viewportH);
+      const visibleHeightCss = visibleBottom - visibleTop;
+      if (visibleHeightCss <= 0) break; // shouldn't happen, but avoid an infinite loop
+
+      // Source rect within the captured frame (device px).
+      const srcX = Math.round((rectNow.left) * scaleX);
+      const srcY = Math.round(visibleTop * scaleY);
+      const srcW = Math.round(cardWidthCss * scaleX);
+      const srcH = Math.round(visibleHeightCss * scaleY);
+
+      // Destination position within the output canvas: how far down the
+      // card (in device px) this slice starts.
+      const destY = Math.round(coveredCss * scaleY);
+
+      outCtx.drawImage(frame, srcX, srcY, srcW, srcH, 0, destY, srcW, srcH);
+
+      coveredCss += visibleHeightCss;
+    }
+
+    outCanvas.toBlob((blob) => {
+      if (!blob) {
+        alert("Gagal menjana imej.");
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `mushaf-halaman-${String(currentPage).padStart(3, "0")}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, "image/png");
+  } catch (e) {
+    if (e.name !== "NotAllowedError") { // user cancelling the share prompt isn't an error
+      console.warn("Screenshot failed:", e);
+      alert("Sesuatu tidak kena semasa menangkap skrin.");
+    }
+  } finally {
+    if (stream) stream.getTracks().forEach((t) => t.stop());
+    window.scrollTo(0, originalScrollY);
+    hiddenEls.forEach(([el, prevVisibility]) => { el.style.visibility = prevVisibility; });
+  }
+}
+
+saveImageBtn.addEventListener("click", async () => {
+  const originalLabel = saveImageBtn.textContent;
+  saveImageBtn.disabled = true;
+  saveImageBtn.textContent = "…";
+  try {
+    await captureCardScreenshot();
+  } finally {
+    saveImageBtn.disabled = false;
+    saveImageBtn.textContent = originalLabel;
+  }
 });
 
 wtToggle.addEventListener("change", () => {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "mushaf-offline-v1";
+const CACHE_NAME = "mushaf-offline-v2";
 const NUM_PAGES = 604;
 const NUM_SURAHS = 114;
 
