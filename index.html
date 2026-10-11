@@ -1204,6 +1204,77 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
   right: 6px;
   top: calc(50% + 32px + 8px);
 }
+
+/* ── Annotate (draw) button: sits under the left "next page" arrow, same look ── */
+.card-draw-btn {
+  left: 0;
+  top: calc(50% + 32px + 8px);
+  transform: none;
+  height: 44px;
+  font-size: 16px;
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+}
+.card-draw-btn.active {
+  opacity: 1;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #FBF6E6;
+}
+
+/* ── Drawing layer (lives inside #zoom-content so it zooms/pans with the page) ── */
+#zoom-content { position: relative; }
+#draw-canvas {
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  z-index: 5;
+  pointer-events: none;
+}
+body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: crosshair; }
+
+.draw-bar {
+  display: none;
+  position: fixed;
+  top: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+}
+.draw-bar.visible { display: flex; }
+.draw-row { display: flex; align-items: center; gap: 8px; }
+.draw-btn {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--card-inner);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--ink-mid);
+  padding: 0;
+  cursor: pointer;
+}
+.draw-btn.active { background: var(--accent); border-color: var(--accent); color: #FBF6E6; }
+.draw-btn:active { transform: scale(0.95); }
+.draw-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.draw-swatch {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.draw-swatch.active { outline: 2px solid var(--ink); outline-offset: 2px; }
+.draw-sep { width: 1px; height: 18px; background: var(--border-light); }
+.draw-width .dot { display: block; border-radius: 50%; background: currentColor; }
   .shell { padding: 34px 12px 56px; }
   #page-render { padding: 10px 8px; }
   .sticky-controls { padding: 5px 10px; }
@@ -1432,6 +1503,8 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
   .history-btn:hover:not(:disabled) { background: var(--accent-light); color: var(--accent); }
   .hl-btn:hover:not(:disabled):not(.active) { background: var(--parchment); }
   .hl-swatch:hover:not(.active) { opacity: 0.85; }
+  .card-draw-btn.active:hover:not(:disabled) { background: var(--accent); color: #FBF6E6; }
+  .draw-btn:hover:not(:disabled):not(.active) { background: var(--parchment); }
   .topics-panel-btn:hover { color: var(--ink); background: var(--parchment); }
   .topic-card-wiki:hover { text-decoration: underline; }
   .topic-detail-ayah:hover { background: var(--accent-light); }
@@ -1483,9 +1556,6 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
       <div class="toggle-wrap hl-wrap">
         <button class="hl-btn" id="clear-data-btn" title="Padam data luar talian" aria-label="Padam data luar talian">❌</button>
       </div>
-      <div class="toggle-wrap hl-wrap">
-        <button class="hl-btn" id="save-image-btn" title="Tangkap skrin halaman" aria-label="Tangkap skrin halaman">💾</button>
-      </div>
     </div>
   </div>
 </div>
@@ -1499,6 +1569,28 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
     <button class="hl-swatch" data-color="#81D4FA" style="background:#81D4FA" title="Biru"></button>
     <button class="hl-swatch" data-color="#F48FB1" style="background:#F48FB1" title="Pink"></button>
     <button class="hl-swatch" data-color="#FFB74D" style="background:#FFB74D" title="Oren"></button>
+  </div>
+
+  <div class="draw-bar" id="draw-bar">
+    <div class="draw-row">
+      <button class="draw-btn active" id="draw-tool-pen" title="Pen"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+      <button class="draw-btn" id="draw-tool-line" title="Garis lurus"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5"/></svg></button>
+      <button class="draw-btn" id="draw-tool-eraser" title="Pemadam"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h10"/><path d="M5.5 13.5l7-7a2 2 0 0 1 2.8 0l3.2 3.2a2 2 0 0 1 0 2.8L11 20H8l-2.5-2.5a2 2 0 0 1 0-4Z"/></svg></button>
+      <span class="draw-sep"></span>
+      <button class="draw-btn" id="draw-undo" title="Buat asal" disabled><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+      <button class="draw-btn" id="draw-clear" title="Padam semua lukisan halaman ini"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg></button>
+    </div>
+    <div class="draw-row">
+      <button class="draw-swatch active" data-draw-color="#D32F2F" style="background:#D32F2F" title="Merah"></button>
+      <button class="draw-swatch" data-draw-color="#1976D2" style="background:#1976D2" title="Biru"></button>
+      <button class="draw-swatch" data-draw-color="#2E7D32" style="background:#2E7D32" title="Hijau"></button>
+      <button class="draw-swatch" data-draw-color="#212121" style="background:#212121" title="Hitam"></button>
+      <button class="draw-swatch" data-draw-color="#EF6C00" style="background:#EF6C00" title="Oren"></button>
+      <span class="draw-sep"></span>
+      <button class="draw-btn draw-width" data-draw-width="2" title="Nipis"><span class="dot" style="width:3px;height:3px"></span></button>
+      <button class="draw-btn draw-width active" data-draw-width="3.5" title="Sederhana"><span class="dot" style="width:6px;height:6px"></span></button>
+      <button class="draw-btn draw-width" data-draw-width="6" title="Tebal"><span class="dot" style="width:10px;height:10px"></span></button>
+    </div>
   </div>
 
   <p class="subtitle">QPC V1 · Madinah Mushaf, 1405H print</p>
@@ -1560,7 +1652,9 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
       <div class="edge-label edge-label-prev" id="edge-label-prev"><span id="edge-label-prev-text"></span></div>
       <button class="card-nav-btn card-nav-prev" id="card-prev-btn" title="Halaman sebelum" aria-label="Halaman sebelum">&#8249;</button>
       <button class="card-nav-btn card-nav-next" id="card-next-btn" title="Halaman berikut" aria-label="Halaman berikut">&#8250;</button>
+      <button class="card-nav-btn card-draw-btn" id="card-draw-btn" title="Lukis / anotasi" aria-label="Lukis / anotasi">&#9998;</button>
       <div id="zoom-content">
+        <canvas id="draw-canvas"></canvas>
         <div id="loader">
           <div class="spinner"></div>
           <div class="loader-text">Loading page data…</div>
@@ -1805,8 +1899,9 @@ function setHighlightMode(on) {
   highlightModeEnabled = on;
   hlBtn.classList.toggle("active", on);
   highlightBar.classList.toggle("visible", on);
-  // Mutually exclusive with Word Touch (WT)
+  // Mutually exclusive with Word Touch (WT) and Draw
   wtToggle.disabled = on;
+  drawBtn.disabled = on || wordTouchEnabled;
   if (on && wordTouchEnabled) {
     wordTouchEnabled = false;
     wtToggle.checked = false;
@@ -1848,6 +1943,7 @@ clearDataBtn.addEventListener("click", async () => {
     try {
       localStorage.removeItem(LAST_PAGE_KEY);
       localStorage.removeItem(HIGHLIGHTS_KEY);
+      localStorage.removeItem(DRAW_KEY);
     } catch (e) { /* storage unavailable — ignore */ }
 
     // 2. Clear all Cache Storage (the offline-precached app + Quran data)
@@ -1872,159 +1968,286 @@ clearDataBtn.addEventListener("click", async () => {
   }
 });
 
-/* ── Screenshot the mushaf card ──
-   Uses a real screen capture (getDisplayMedia) instead of a DOM-to-canvas
-   library like html2canvas — that approach re-renders text itself and
-   garbles the mushaf's custom Arabic glyph fonts. A genuine screen capture
-   grabs actual rendered pixels, so the text comes out exactly as shown,
-   including any active highlights or word-by-word labels. If the card is
-   taller than the screen, this scrolls through it and stitches the pieces
-   into one image. */
-const saveImageBtn = document.getElementById("save-image-btn");
+/* ── Drawing / annotation layer ──
+   A transparent <canvas> inside #zoom-content (so it zooms and pans together
+   with the page). Strokes are stored per page, separately for WbW on/off
+   (WbW changes the card's height, which would misalign lines), with
+   coordinates normalised to the canvas size so they survive resizing. */
+const DRAW_KEY = "mushafDrawings";
+let drawings = {};
+try { drawings = JSON.parse(localStorage.getItem(DRAW_KEY) || "{}"); } catch (e) { drawings = {}; }
 
-async function captureCardScreenshot() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-    alert(
-      "Peranti/pelayar ini tidak menyokong tangkapan skrin dalam apl. " +
-      "Sila gunakan ciri 'screenshot' (atau 'scroll capture') bawaan telefon anda."
-    );
+function saveDrawings() {
+  try {
+    Object.keys(drawings).forEach(k => { if (!drawings[k] || !drawings[k].length) delete drawings[k]; });
+    localStorage.setItem(DRAW_KEY, JSON.stringify(drawings));
+  } catch (e) { /* storage full/unavailable — drawings still work for this session */ }
+}
+
+let drawModeEnabled = false;
+let drawTool = "pen";          // "pen" | "line" | "eraser"
+let drawColor = "#D32F2F";
+let drawWidthPx = 3.5;
+let drawHistory = [];          // snapshots (JSON) of the current page's strokes, for undo
+let currentStroke = null;      // stroke being drawn right now
+const drawPointers = new Set();
+let drawMultiTouch = false;    // 2+ fingers down → it's a pinch, not a stroke
+let eraserSnapshotTaken = false;
+
+const drawBtn    = document.getElementById("card-draw-btn");
+const drawBar    = document.getElementById("draw-bar");
+const drawCanvas = document.getElementById("draw-canvas");
+const drawCtx    = drawCanvas.getContext("2d");
+const drawUndoBtn = document.getElementById("draw-undo");
+
+function drawKey() {
+  return currentPage + ":" + (document.body.classList.contains("wbw-on") ? 1 : 0);
+}
+function pageStrokes() {
+  const k = drawKey();
+  return drawings[k] || (drawings[k] = []);
+}
+
+function paintStroke(st) {
+  const W = drawCanvas.width, H = drawCanvas.height, p = st.p;
+  if (!p.length) return;
+  drawCtx.strokeStyle = st.c;
+  drawCtx.fillStyle = st.c;
+  drawCtx.lineWidth = st.w * W;
+  drawCtx.lineCap = "round";
+  drawCtx.lineJoin = "round";
+  if (p.length === 1) {
+    drawCtx.beginPath();
+    drawCtx.arc(p[0][0] * W, p[0][1] * H, st.w * W / 2, 0, Math.PI * 2);
+    drawCtx.fill();
     return;
   }
+  drawCtx.beginPath();
+  drawCtx.moveTo(p[0][0] * W, p[0][1] * H);
+  if (st.t === "line") {
+    const e = p[p.length - 1];
+    drawCtx.lineTo(e[0] * W, e[1] * H);
+  } else {
+    for (let i = 1; i < p.length - 1; i++) {   // smooth: quadratic curves via midpoints
+      const mx = (p[i][0] + p[i + 1][0]) / 2 * W;
+      const my = (p[i][1] + p[i + 1][1]) / 2 * H;
+      drawCtx.quadraticCurveTo(p[i][0] * W, p[i][1] * H, mx, my);
+    }
+    const l = p[p.length - 1];
+    drawCtx.lineTo(l[0] * W, l[1] * H);
+  }
+  drawCtx.stroke();
+}
 
-  const card = document.querySelector(".mushaf-card");
-  if (!card) return;
+function redrawStrokes() {
+  drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+  pageStrokes().forEach(paintStroke);
+  if (currentStroke) paintStroke(currentStroke);
+}
 
-  // Hide anything that floats/overlays on top of the page — since this is a
-  // genuine pixel capture (not a DOM query), anything visually overlapping
-  // the card's rect would otherwise bake itself into the screenshot.
-  const overlaySelectors = [
-    "#nav-toggle", ".sticky-controls", "#highlight-bar", "#topics-panel",
-    "#share-toast", "#offline-progress-banner", "#translation-panel",
-  ];
-  const hiddenEls = [];
-  overlaySelectors.forEach((sel) => {
-    document.querySelectorAll(sel).forEach((el) => {
-      hiddenEls.push([el, el.style.visibility]);
-      el.style.visibility = "hidden";
-    });
+function sizeDrawCanvas() {
+  const zc = document.getElementById("zoom-content");
+  const ratio = Math.min(Math.max(window.devicePixelRatio || 1, 1) * 1.5, 3); // a bit extra so strokes stay crisp when zoomed
+  const w = Math.max(1, Math.round(zc.clientWidth * ratio));
+  const h = Math.max(1, Math.round(zc.clientHeight * ratio));
+  if (drawCanvas.width !== w || drawCanvas.height !== h) {
+    drawCanvas.width = w;
+    drawCanvas.height = h;
+  }
+  redrawStrokes();
+}
+if ("ResizeObserver" in window) {
+  new ResizeObserver(sizeDrawCanvas).observe(document.getElementById("zoom-content"));
+}
+window.addEventListener("resize", sizeDrawCanvas);
+
+function updateUndoBtn() { drawUndoBtn.disabled = drawHistory.length === 0; }
+function onDrawKeyChange() {
+  drawHistory = [];
+  currentStroke = null;
+  updateUndoBtn();
+  redrawStrokes();
+}
+function pushDrawHistory() {
+  drawHistory.push(JSON.stringify(pageStrokes()));
+  if (drawHistory.length > 40) drawHistory.shift();
+  updateUndoBtn();
+}
+
+function canvasPoint(e) {
+  const r = drawCanvas.getBoundingClientRect(); // already includes the zoom/pan transform
+  return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height];
+}
+function cssSize() {
+  const zc = document.getElementById("zoom-content");
+  return [zc.clientWidth, zc.clientHeight];
+}
+function roundPt(pt) { return [+pt[0].toFixed(4), +pt[1].toFixed(4)]; }
+
+function distToSegment(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  let t = len2 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+function eraseAt(pt) {
+  const [cw, ch] = cssSize();
+  const px = pt[0] * cw, py = pt[1] * ch;
+  const reach = 12; // CSS px
+  const list = pageStrokes();
+  const keep = list.filter(st => {
+    const p = st.p;
+    const r = reach + st.w * cw / 2;
+    if (p.length === 1) return Math.hypot(px - p[0][0] * cw, py - p[0][1] * ch) > r;
+    if (st.t === "line") {
+      const a = p[0], b = p[p.length - 1];
+      return distToSegment(px, py, a[0] * cw, a[1] * ch, b[0] * cw, b[1] * ch) > r;
+    }
+    for (let i = 0; i < p.length - 1; i++) {
+      if (distToSegment(px, py, p[i][0] * cw, p[i][1] * ch, p[i + 1][0] * cw, p[i + 1][1] * ch) <= r) return false;
+    }
+    return true;
   });
-
-  let stream = null;
-  const originalScrollY = window.scrollY;
-
-  try {
-    stream = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: 2 },
-      audio: false,
-      preferCurrentTab: true, // Chromium — hints the browser to pre-select "this tab"
-    });
-
-    const video = document.createElement("video");
-    video.srcObject = stream;
-    video.muted = true;
-    await video.play();
-    // Give the stream a moment to deliver its first real frame.
-    await new Promise((resolve) => setTimeout(resolve, 400));
-
-    // Map CSS pixels (window.innerWidth/innerHeight) to the captured
-    // stream's actual pixel dimensions, which may differ (device pixel
-    // ratio, or the user picking a display rather than just the tab).
-    const scaleX = video.videoWidth / window.innerWidth;
-    const scaleY = video.videoHeight / window.innerHeight;
-
-    function grabFrameCanvas() {
-      const c = document.createElement("canvas");
-      c.width = video.videoWidth;
-      c.height = video.videoHeight;
-      c.getContext("2d").drawImage(video, 0, 0);
-      return c;
-    }
-
-    // Card's position/size in *document* coordinates (independent of scroll).
-    const rectAtStart = card.getBoundingClientRect();
-    const cardDocTop = rectAtStart.top + window.scrollY;
-    const cardDocLeft = rectAtStart.left + window.scrollX;
-    const cardWidthCss = card.offsetWidth;
-    const cardHeightCss = card.offsetHeight;
-    const viewportH = window.innerHeight;
-
-    const outCanvas = document.createElement("canvas");
-    outCanvas.width = Math.round(cardWidthCss * scaleX);
-    outCanvas.height = Math.round(cardHeightCss * scaleY);
-    const outCtx = outCanvas.getContext("2d");
-
-    let coveredCss = 0; // how much of the card's height (CSS px) we've captured so far
-    while (coveredCss < cardHeightCss) {
-      const scrollTarget = cardDocTop + coveredCss;
-      window.scrollTo(0, scrollTarget);
-      // Let layout/paint settle, and the stream catch up, before grabbing a frame.
-      await new Promise((resolve) => setTimeout(resolve, 350));
-
-      const rectNow = card.getBoundingClientRect(); // card's position relative to viewport, right now
-      const frame = grabFrameCanvas();
-
-      // The slice of the card currently visible on screen (CSS px, viewport-relative).
-      const visibleTop = Math.max(rectNow.top, 0);
-      const visibleBottom = Math.min(rectNow.bottom, viewportH);
-      const visibleHeightCss = visibleBottom - visibleTop;
-      if (visibleHeightCss <= 0) break; // shouldn't happen, but avoid an infinite loop
-
-      // Source rect within the captured frame (device px).
-      const srcX = Math.round((rectNow.left) * scaleX);
-      const srcY = Math.round(visibleTop * scaleY);
-      const srcW = Math.round(cardWidthCss * scaleX);
-      const srcH = Math.round(visibleHeightCss * scaleY);
-
-      // Destination position within the output canvas: how far down the
-      // card (in device px) this slice starts.
-      const destY = Math.round(coveredCss * scaleY);
-
-      outCtx.drawImage(frame, srcX, srcY, srcW, srcH, 0, destY, srcW, srcH);
-
-      coveredCss += visibleHeightCss;
-    }
-
-    outCanvas.toBlob((blob) => {
-      if (!blob) {
-        alert("Gagal menjana imej.");
-        return;
-      }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `mushaf-halaman-${String(currentPage).padStart(3, "0")}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }, "image/png");
-  } catch (e) {
-    if (e.name !== "NotAllowedError") { // user cancelling the share prompt isn't an error
-      console.warn("Screenshot failed:", e);
-      alert("Sesuatu tidak kena semasa menangkap skrin.");
-    }
-  } finally {
-    if (stream) stream.getTracks().forEach((t) => t.stop());
-    window.scrollTo(0, originalScrollY);
-    hiddenEls.forEach(([el, prevVisibility]) => { el.style.visibility = prevVisibility; });
+  if (keep.length !== list.length) {
+    if (!eraserSnapshotTaken) { pushDrawHistory(); eraserSnapshotTaken = true; }
+    drawings[drawKey()] = keep;
+    redrawStrokes();
   }
 }
 
-saveImageBtn.addEventListener("click", async () => {
-  const originalLabel = saveImageBtn.textContent;
-  saveImageBtn.disabled = true;
-  saveImageBtn.textContent = "…";
-  try {
-    await captureCardScreenshot();
-  } finally {
-    saveImageBtn.disabled = false;
-    saveImageBtn.textContent = originalLabel;
+function cancelDrawing() {
+  currentStroke = null;
+  redrawStrokes();
+}
+
+drawCanvas.addEventListener("pointerdown", (e) => {
+  if (!drawModeEnabled) return;
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+  drawPointers.add(e.pointerId);
+  if (drawPointers.size > 1) {       // second finger: abandon the stroke, let pinch-zoom take over
+    drawMultiTouch = true;
+    cancelDrawing();
+    return;
   }
+  drawMultiTouch = false;
+  try { drawCanvas.setPointerCapture(e.pointerId); } catch (err) {}
+  const pt = canvasPoint(e);
+  const [cw] = cssSize();
+  if (drawTool === "eraser") {
+    eraserSnapshotTaken = false;
+    eraseAt(pt);
+  } else {
+    currentStroke = { t: drawTool, c: drawColor, w: drawWidthPx / cw, p: [roundPt(pt)] };
+    redrawStrokes();
+  }
+  e.preventDefault();
 });
+
+drawCanvas.addEventListener("pointermove", (e) => {
+  if (!drawModeEnabled || drawMultiTouch || !drawPointers.has(e.pointerId)) return;
+  const pt = canvasPoint(e);
+  if (drawTool === "eraser") { eraseAt(pt); return; }
+  if (!currentStroke) return;
+  const [cw, ch] = cssSize();
+  if (drawTool === "line") {
+    currentStroke.p = [currentStroke.p[0], roundPt(pt)];
+  } else {
+    const last = currentStroke.p[currentStroke.p.length - 1];
+    if (Math.hypot((pt[0] - last[0]) * cw, (pt[1] - last[1]) * ch) < 1.5) return; // skip jitter
+    currentStroke.p.push(roundPt(pt));
+  }
+  redrawStrokes();
+  e.preventDefault();
+});
+
+function endPointer(e) {
+  drawPointers.delete(e.pointerId);
+  if (drawPointers.size === 0) {
+    if (currentStroke && !drawMultiTouch) {
+      const st = currentStroke;
+      const isLine = st.t === "line";
+      const [cw, ch] = cssSize();
+      const e0 = st.p[0], e1 = st.p[st.p.length - 1];
+      const tooShort = isLine && Math.hypot((e1[0] - e0[0]) * cw, (e1[1] - e0[1]) * ch) < 4;
+      if (!tooShort) {
+        pushDrawHistory();
+        pageStrokes().push(st);
+        saveDrawings();
+      }
+    } else if (drawTool === "eraser" && eraserSnapshotTaken) {
+      saveDrawings();
+    }
+    currentStroke = null;
+    drawMultiTouch = false;
+    eraserSnapshotTaken = false;
+    redrawStrokes();
+  }
+}
+drawCanvas.addEventListener("pointerup", (e) => {
+  if (drawTool === "eraser" && eraserSnapshotTaken) saveDrawings();
+  endPointer(e);
+});
+drawCanvas.addEventListener("pointercancel", endPointer);
+
+function setDrawMode(on) {
+  drawModeEnabled = on;
+  document.body.classList.toggle("draw-on", on);
+  drawBtn.classList.toggle("active", on);
+  drawBar.classList.toggle("visible", on);
+  // Mutually exclusive with Word Touch (WT) and Highlighter
+  wtToggle.disabled = on || highlightModeEnabled;
+  hlBtn.disabled = on || wordTouchEnabled;
+  if (!on) { drawPointers.clear(); drawMultiTouch = false; cancelDrawing(); }
+}
+drawBtn.addEventListener("click", () => setDrawMode(!drawModeEnabled));
+
+const drawToolBtns = { pen: "draw-tool-pen", line: "draw-tool-line", eraser: "draw-tool-eraser" };
+Object.entries(drawToolBtns).forEach(([tool, id]) => {
+  document.getElementById(id).addEventListener("click", () => {
+    drawTool = tool;
+    Object.values(drawToolBtns).forEach(i => document.getElementById(i).classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+  });
+});
+document.querySelectorAll(".draw-swatch").forEach(sw => {
+  sw.addEventListener("click", () => {
+    drawColor = sw.dataset.drawColor;
+    document.querySelectorAll(".draw-swatch").forEach(x => x.classList.remove("active"));
+    sw.classList.add("active");
+    if (drawTool === "eraser") document.getElementById("draw-tool-pen").click(); // picking a colour implies drawing again
+  });
+});
+document.querySelectorAll(".draw-width").forEach(b => {
+  b.addEventListener("click", () => {
+    drawWidthPx = parseFloat(b.dataset.drawWidth);
+    document.querySelectorAll(".draw-width").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+  });
+});
+drawUndoBtn.addEventListener("click", () => {
+  if (!drawHistory.length) return;
+  drawings[drawKey()] = JSON.parse(drawHistory.pop());
+  saveDrawings();
+  updateUndoBtn();
+  redrawStrokes();
+});
+document.getElementById("draw-clear").addEventListener("click", () => {
+  if (!pageStrokes().length) return;
+  if (!confirm("Padam semua lukisan pada halaman ini?")) return;
+  pushDrawHistory();
+  drawings[drawKey()] = [];
+  saveDrawings();
+  redrawStrokes();
+});
+sizeDrawCanvas();
 
 wtToggle.addEventListener("change", () => {
   wordTouchEnabled = wtToggle.checked;
   document.body.classList.toggle("wt-on", wordTouchEnabled);
-  // Mutually exclusive with Highlighter
+  // Mutually exclusive with Highlighter and Draw
   hlBtn.disabled = wordTouchEnabled;
+  drawBtn.disabled = wordTouchEnabled;
   if (wordTouchEnabled && highlightModeEnabled) {
     setHighlightMode(false);
   }
@@ -2049,6 +2272,7 @@ function goToPage(num) {
   updateHistoryButtons();
 
   currentPage = num;
+  try { onDrawKeyChange(); } catch (e) { /* drawing layer not ready yet */ }
   saveLastPage(num);
   pageInput.value = num;
   if (cardPrevBtn) cardPrevBtn.disabled = num <= 1;
@@ -2335,7 +2559,7 @@ function pushWord(lineMap, lineNum, word) {
 function clearRender() {
   const zc = document.getElementById("zoom-content");
   [...zc.children].forEach(c => {
-    if (c.id !== "loader" && c.id !== "error-msg") c.remove();
+    if (c.id !== "loader" && c.id !== "error-msg" && c.id !== "draw-canvas") c.remove();
   });
 }
 
@@ -3259,7 +3483,7 @@ jumpGoBtn.addEventListener("click", jumpToAyah);
     } else if (activeTouches.length === 1) {
       // Double-tap detection
       const now = Date.now();
-      if (now - lastTap < 300) {
+      if (!drawModeEnabled && now - lastTap < 300) {
         e.preventDefault();
         if (scale !== 1) resetZoom(true);
         else {
@@ -3297,7 +3521,7 @@ jumpGoBtn.addEventListener("click", jumpToAyah);
       clampPan();
       applyTransform(false);
       showBadge(scale.toFixed(1) + "×");
-    } else if (touches.length === 1 && scale > 1) {
+    } else if (touches.length === 1 && scale > 1 && !drawModeEnabled) {
       e.preventDefault();
       transX = startTransX + (touches[0].clientX - startMid.x);
       transY = startTransY + (touches[0].clientY - startMid.y);
@@ -3533,6 +3757,7 @@ const wbwToggle = document.getElementById("wbw-toggle");
 wbwToggle.addEventListener("change", () => {
   wbwEnabled = wbwToggle.checked;
   document.body.classList.toggle("wbw-on", wbwEnabled);
+  try { onDrawKeyChange(); } catch (e) {}
   // No re-render needed — labels already exist in DOM, CSS shows/hides them
 });
 /* ════════════════════════════════════════
