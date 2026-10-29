@@ -399,16 +399,6 @@ header { text-align: center; padding-bottom: 4px; }
 }
 
 /* Page navigation group */
-.ctrl-page {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  background: var(--card);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-btn);
-  overflow: hidden;
-  flex-shrink: 0;
-}
 .nav-btn {
   background: transparent;
   border: none;
@@ -426,21 +416,24 @@ header { text-align: center; padding-bottom: 4px; }
 .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 .page-input {
-  background: transparent;
-  border: none;
-  color: var(--ink);
-  padding: 3px 2px;
-  font-size: 12px;
+  background: var(--parchment);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  color: var(--ink-mid);
+  padding: 3px 4px;
+  font-size: 11px;
   font-family: 'DM Sans', sans-serif;
   font-weight: 600;
-  width: 30px;
+  letter-spacing: 0.3px;
+  width: 44px;
   text-align: center;
   outline: none;
   -moz-appearance: textfield;
   appearance: textfield;
-  line-height: 1;
-  align-self: center;
+  line-height: 1.2;
+  flex-shrink: 0;
 }
+.page-input:focus { border-color: var(--accent); color: var(--ink); }
 .page-input::-webkit-inner-spin-button,
 .page-input::-webkit-outer-spin-button { -webkit-appearance: none; }
 
@@ -448,11 +441,12 @@ header { text-align: center; padding-bottom: 4px; }
   background: var(--fill-bg);
   border: 1.5px solid var(--fill-bg);
   color: #F4F1EA;
-  border-radius: var(--radius-btn);
-  padding: 3px 8px;
+  border-radius: 20px;
+  padding: 3px 9px;
   font-family: 'DM Sans', sans-serif;
   font-size: 10px;
   font-weight: 600;
+  line-height: 1.2;
   cursor: pointer;
   letter-spacing: 0.3px;
   transition: opacity 0.15s;
@@ -636,7 +630,7 @@ body.wbw-on .type-bismillah .wbw-label { display: none; }
 }
 
 .ayah-jump { grid-column: 1; justify-self: start; }
-.page-nav-group { grid-column: 2; justify-self: center; display: flex; align-items: center; gap: 6px; }
+.page-nav-group { grid-column: 2; justify-self: center; display: flex; align-items: center; gap: 4px; }
 .page-range { grid-column: 3; justify-self: end; }
 .jump-status { grid-column: 1 / -1; justify-self: start; }
 
@@ -660,22 +654,6 @@ body.wbw-on .type-bismillah .wbw-label { display: none; }
 }
 .history-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .history-btn:active:not(:disabled) { background: var(--accent-light); color: var(--accent); }
-
-.page-badge {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--ink-mid);
-  background: var(--parchment);
-  border: 1.5px solid var(--border);
-  padding: 2px 10px;
-  border-radius: 20px;
-  letter-spacing: 0.5px;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-}
 
 .page-range {
   font-family: 'DM Sans', sans-serif;
@@ -1522,12 +1500,6 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
 <div class="sticky-controls">
   <!-- Controls -->
   <div class="controls">
-    <!-- Page nav group -->
-    <div class="ctrl-page">
-      <input type="number" class="page-input" id="page-input" min="1" max="604" value="1" />
-    </div>
-    <button class="go-btn" id="go-btn">Go</button>
-
     <div class="toggle-group">
       <div class="toggle-wrap hl-wrap">
         <button class="hl-btn" id="hl-btn" title="Penanda (Highlighter)" aria-label="Penanda">🖍</button>
@@ -1638,7 +1610,8 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
         <button class="ayah-jump-btn" id="jump-go-btn" title="Pergi ke ayat">&#8594;</button>
       </div>
       <span class="page-nav-group">
-        <span class="page-badge" id="page-label">page 001</span>
+        <input type="number" inputmode="numeric" class="page-input" id="page-input" min="1" max="604" value="1" title="Nombor halaman" aria-label="Nombor halaman" />
+        <button class="go-btn" id="go-btn" title="Pergi ke halaman">Go</button>
         <button class="history-btn" id="history-back-btn" disabled title="Kembali ke halaman terakhir dilawati">↩</button>
         <button class="history-btn" id="history-next-btn" disabled title="Ke hadapan dalam sejarah lawatan">↪</button>
       </span>
@@ -2449,7 +2422,6 @@ function prefetchAdjacentPages(num) {
 
 async function loadPage(num) {
   const padded = String(num).padStart(3, "0");
-  document.getElementById("page-label").textContent = `page ${padded}`;
   document.getElementById("error-msg").style.display = "none";
   transContent.innerHTML = "";
 
