@@ -1199,6 +1199,24 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
   border-color: var(--accent);
   color: #FBF6E6;
 }
+.card-wbw-btn {
+  right: 0;
+  top: calc(50% - 32px - 6px - 44px);
+  transform: none;
+  height: 44px;
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+}
+.card-bm-btn { top: calc(50% - 32px - 6px - 44px - 6px - 44px); }
+.card-wbw-btn.active {
+  opacity: 1;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #FBF6E6;
+}
 .card-hl-btn {
   top: calc(50% + 32px + 8px + 44px + 6px);
   font-family: 'DM Sans', sans-serif;
@@ -1487,7 +1505,8 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
   .history-btn:hover:not(:disabled) { background: var(--accent-light); color: var(--accent); }
   .hl-btn:hover:not(:disabled):not(.active) { background: var(--parchment); }
   .hl-swatch:hover:not(.active) { opacity: 0.85; }
-  .card-draw-btn.active:hover:not(:disabled) { background: var(--accent); color: #FBF6E6; }
+  .card-draw-btn.active:hover:not(:disabled),
+  .card-wbw-btn.active:hover:not(:disabled) { background: var(--accent); color: #FBF6E6; }
   .draw-btn:hover:not(:disabled):not(.active) { background: var(--parchment); }
   .topics-panel-btn:hover { color: var(--ink); background: var(--parchment); }
   .topic-card-wiki:hover { text-decoration: underline; }
@@ -1514,20 +1533,6 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
           <span class="slider"></span>
         </label>
       </div>
-      <div class="toggle-wrap">
-        <span class="toggle-label">BM</span>
-        <label class="toggle">
-          <input type="checkbox" id="trans-toggle" />
-          <span class="slider"></span>
-        </label>
-      </div>
-      <div class="toggle-wrap">
-        <span class="toggle-label">WbW</span>
-        <label class="toggle">
-          <input type="checkbox" id="wbw-toggle" />
-          <span class="slider slider-wbw"></span>
-        </label>
-      </div>
       <div class="toggle-wrap hl-wrap">
         <button class="hl-btn" id="clear-data-btn" title="Padam data luar talian" aria-label="Padam data luar talian">❌</button>
       </div>
@@ -1539,6 +1544,7 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
 
   <div class="highlight-bar" id="highlight-bar">
     <button class="hl-swatch hl-eraser" id="hl-eraser" title="Padam penanda">✕</button>
+    <button class="hl-swatch hl-eraser hl-bin" id="hl-bin" title="Padam semua penanda" aria-label="Padam semua penanda"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg></button>
     <button class="hl-swatch active" data-color="#FFF176" style="background:#FFF176" title="Kuning"></button>
     <button class="hl-swatch" data-color="#AED581" style="background:#AED581" title="Hijau"></button>
     <button class="hl-swatch" data-color="#81D4FA" style="background:#81D4FA" title="Biru"></button>
@@ -1626,6 +1632,8 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
       <div id="zoom-badge"></div>
       <div class="edge-label edge-label-next" id="edge-label-next"><span id="edge-label-next-text"></span></div>
       <div class="edge-label edge-label-prev" id="edge-label-prev"><span id="edge-label-prev-text"></span></div>
+      <button class="card-nav-btn card-wbw-btn card-bm-btn" id="trans-toggle" aria-pressed="false" title="Terjemahan Bahasa Melayu (BM)" aria-label="Terjemahan Bahasa Melayu">T</button>
+      <button class="card-nav-btn card-wbw-btn" id="wbw-toggle" aria-pressed="false" title="Terjemahan perkataan demi perkataan (WbW)" aria-label="Terjemahan perkataan demi perkataan">W</button>
       <button class="card-nav-btn card-nav-prev" id="card-prev-btn" title="Halaman sebelum" aria-label="Halaman sebelum">&#8249;</button>
       <button class="card-nav-btn card-nav-next" id="card-next-btn" title="Halaman berikut" aria-label="Halaman berikut">&#8250;</button>
       <button class="card-nav-btn card-draw-btn" id="card-draw-btn" title="Lukis / anotasi" aria-label="Lukis / anotasi">&#9998;</button>
@@ -1901,6 +1909,15 @@ hlEraserBtn.addEventListener("click", () => {
   eraserMode = true;
   hlSwatches.forEach(s => s.classList.remove("active"));
   hlEraserBtn.classList.add("active");
+});
+
+/* Bin: remove every highlight on every page */
+document.getElementById("hl-bin").addEventListener("click", () => {
+  if (!Object.keys(highlights).length) return;
+  if (!confirm("Padam SEMUA penanda pada semua halaman?\n\nTindakan ini tidak boleh dibatalkan.")) return;
+  highlights = {};
+  saveHighlights();
+  document.querySelectorAll(".mushaf-word").forEach(el => { el.style.backgroundColor = ""; });
 });
 
 /* ── Clear offline data / "uninstall" ── */
@@ -2230,8 +2247,10 @@ wtToggle.addEventListener("change", () => {
   }
 });
 
-transToggle.addEventListener("change", () => {
-  transEnabled = transToggle.checked;
+transToggle.addEventListener("click", () => {
+  transEnabled = !transEnabled;
+  transToggle.classList.toggle("active", transEnabled);
+  transToggle.setAttribute("aria-pressed", String(transEnabled));
   if (transEnabled && currentPageData) {
     transPanel.classList.add("visible");
     showTranslation(currentPageData);
@@ -3730,8 +3749,10 @@ const WBW_DATA = {"1:1":["dengan nama","Allah","Maha Pengasih","Maha Penyayang",
 let wbwEnabled = false;
 const wbwToggle = document.getElementById("wbw-toggle");
 
-wbwToggle.addEventListener("change", () => {
-  wbwEnabled = wbwToggle.checked;
+wbwToggle.addEventListener("click", () => {
+  wbwEnabled = !wbwEnabled;
+  wbwToggle.classList.toggle("active", wbwEnabled);
+  wbwToggle.setAttribute("aria-pressed", String(wbwEnabled));
   document.body.classList.toggle("wbw-on", wbwEnabled);
   try { onDrawKeyChange(); } catch (e) {}
   // No re-render needed — labels already exist in DOM, CSS shows/hides them
