@@ -1199,6 +1199,12 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
   border-color: var(--accent);
   color: #FBF6E6;
 }
+.card-hl-btn {
+  top: calc(50% + 32px + 8px + 44px + 6px);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+}
 
 /* ── Drawing layer (lives inside #zoom-content so it zooms/pans with the page) ── */
 #zoom-content { position: relative; }
@@ -1501,9 +1507,6 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
   <!-- Controls -->
   <div class="controls">
     <div class="toggle-group">
-      <div class="toggle-wrap hl-wrap">
-        <button class="hl-btn" id="hl-btn" title="Penanda (Highlighter)" aria-label="Penanda">🖍</button>
-      </div>
       <div class="toggle-wrap">
         <span class="toggle-label">WT</span>
         <label class="toggle">
@@ -1626,6 +1629,7 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
       <button class="card-nav-btn card-nav-prev" id="card-prev-btn" title="Halaman sebelum" aria-label="Halaman sebelum">&#8249;</button>
       <button class="card-nav-btn card-nav-next" id="card-next-btn" title="Halaman berikut" aria-label="Halaman berikut">&#8250;</button>
       <button class="card-nav-btn card-draw-btn" id="card-draw-btn" title="Lukis / anotasi" aria-label="Lukis / anotasi">&#9998;</button>
+      <button class="card-nav-btn card-draw-btn card-hl-btn" id="hl-btn" title="Penanda (Highlighter)" aria-label="Penanda">H</button>
       <div id="zoom-content">
         <canvas id="draw-canvas"></canvas>
         <div id="loader">
