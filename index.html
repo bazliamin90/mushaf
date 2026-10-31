@@ -114,14 +114,14 @@ header { text-align: center; padding-bottom: 4px; }
   display: flex;
   gap: 8px;
   align-items: stretch;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   direction: ltr;
 }
 
 .surah-select-wrap {
   position: relative;
-  flex: 1 1 170px;
-  min-width: 150px;
+  flex: 1 1 120px;
+  min-width: 100px;
   background: var(--card);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-btn);
@@ -622,7 +622,7 @@ body.wbw-on .type-bismillah .wbw-label { display: none; }
 
 .card-topbar {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
@@ -633,7 +633,6 @@ body.wbw-on .type-bismillah .wbw-label { display: none; }
 
 .ayah-jump { grid-column: 1; justify-self: start; }
 .page-nav-group { grid-column: 2; justify-self: center; display: flex; align-items: center; gap: 4px; }
-.page-range { grid-column: 3; justify-self: end; }
 .jump-status { grid-column: 1 / -1; justify-self: start; }
 
 .history-btn {
@@ -655,16 +654,29 @@ body.wbw-on .type-bismillah .wbw-label { display: none; }
   transition: background 0.15s, color 0.15s, opacity 0.15s;
 }
 .history-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.history-btn.active { background: var(--accent); border-color: var(--accent); color: #FBF6E6; }
+.wbw-nav-btn { grid-column: 3; justify-self: end; font-size: 10px; letter-spacing: 0; }
 .history-btn:active:not(:disabled) { background: var(--accent-light); color: var(--accent); }
 
 .page-range {
+  flex: 0 0 auto;
+  box-sizing: content-box;
+  width: 15.5ch;            /* longest possible range, e.g. "26:100 – 26:227" */
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-btn);
+  color: var(--ink);
+  padding: 7px 10px;
   font-family: 'DM Sans', sans-serif;
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--ink-dim);
-  letter-spacing: 0;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
   white-space: nowrap;
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  direction: ltr;
 }
 
 
@@ -1245,7 +1257,7 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
   font-size: 15px;
   font-weight: 700;
 }
-.card-bm-btn { top: calc(50% - 32px - 6px - 44px - 6px - 44px); }
+.card-bm-btn { top: calc(50% - 32px - 6px - 44px); }
 .card-wbw-btn.active {
   opacity: 1;
   background: var(--accent);
@@ -1537,7 +1549,7 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
   #nav-toggle:hover { opacity: 0.85; }
   .card-nav-btn:hover:not(:disabled) { background: var(--parchment); color: var(--accent); opacity: 1; }
   .trans-copy-btn:hover { background: var(--accent-light); color: var(--accent); }
-  .history-btn:hover:not(:disabled) { background: var(--accent-light); color: var(--accent); }
+  .history-btn:hover:not(:disabled):not(.active) { background: var(--accent-light); color: var(--accent); }
   .hl-btn:hover:not(:disabled):not(.active) { background: var(--parchment); }
   .hl-swatch:hover:not(.active) { opacity: 0.85; }
   .card-draw-btn.active:hover:not(:disabled),
@@ -1555,7 +1567,7 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
   .page-input { width: 34px; }
   .go-btn, .ayah-jump-btn { padding: 3px 6px; }
   .page-nav-group { gap: 2px; }
-  .page-range { font-size: 9px; }
+  .page-range { font-size: 11px; padding: 7px 6px; }
 }
 </style>
 </head>
@@ -1636,6 +1648,7 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
       <input type="text" id="surah-search-input" placeholder="Pilih Surah…" autocomplete="off" />
       <div class="surah-results" id="surah-results"></div>
     </div>
+    <span class="page-range" id="page-range" title="Julat ayat pada halaman ini"></span>
   </div>
 
   <div class="search-results" id="search-results"></div>
@@ -1668,7 +1681,7 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
         <button class="history-btn" id="history-back-btn" disabled title="Kembali ke halaman terakhir dilawati">↩</button>
         <button class="history-btn" id="history-next-btn" disabled title="Ke hadapan dalam sejarah lawatan">↪</button>
       </span>
-      <span class="page-range" id="page-range"></span>
+      <button class="history-btn wbw-nav-btn" id="wbw-toggle" aria-pressed="false" title="Terjemahan perkataan demi perkataan (WbW)" aria-label="Terjemahan perkataan demi perkataan">W</button>
       <span class="jump-status" id="jump-status"></span>
     </div>
 
@@ -1677,7 +1690,6 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
       <div class="edge-label edge-label-next" id="edge-label-next"><span id="edge-label-next-text"></span></div>
       <div class="edge-label edge-label-prev" id="edge-label-prev"><span id="edge-label-prev-text"></span></div>
       <button class="card-nav-btn card-wbw-btn card-bm-btn" id="trans-toggle" aria-pressed="false" title="Terjemahan Bahasa Melayu (BM)" aria-label="Terjemahan Bahasa Melayu">T</button>
-      <button class="card-nav-btn card-wbw-btn" id="wbw-toggle" aria-pressed="false" title="Terjemahan perkataan demi perkataan (WbW)" aria-label="Terjemahan perkataan demi perkataan">W</button>
       <button class="card-nav-btn card-nav-prev" id="card-prev-btn" title="Halaman sebelum" aria-label="Halaman sebelum">&#8249;</button>
       <button class="card-nav-btn card-nav-next" id="card-next-btn" title="Halaman berikut" aria-label="Halaman berikut">&#8250;</button>
       <button class="card-nav-btn card-draw-btn" id="card-draw-btn" title="Lukis / anotasi" aria-label="Lukis / anotasi">&#9998;</button>
