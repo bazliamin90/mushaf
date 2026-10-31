@@ -82,21 +82,23 @@ header { text-align: center; padding-bottom: 4px; }
 }
 
 .subtitle {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 2.5px;
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
   text-transform: uppercase;
-  color: var(--accent);
-  margin: 10px auto 0;
+  color: var(--ink-mid);
+  white-space: nowrap;
+  flex-shrink: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
   direction: ltr;
-  text-align: center;
-  width: fit-content;
-  background: var(--card-inner);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 4px 14px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-btn);
+  padding: 4px 8px;
+  margin: 0 6px 0 0;
 }
 
 /* ── Divider ── */
@@ -620,10 +622,10 @@ body.wbw-on .type-bismillah .wbw-label { display: none; }
 
 .card-topbar {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 6px;
+  padding: 6px 10px;
   border-bottom: 1.5px solid var(--border-light);
   background: var(--card);
   direction: ltr;
@@ -660,7 +662,8 @@ body.wbw-on .type-bismillah .wbw-label { display: none; }
   font-size: 10px;
   font-weight: 500;
   color: var(--ink-dim);
-  letter-spacing: 0.2px;
+  letter-spacing: 0;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
@@ -668,26 +671,27 @@ body.wbw-on .type-bismillah .wbw-label { display: none; }
 .ayah-jump {
   display: flex;
   align-items: center;
-  gap: 0;
-  background: var(--parchment);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-btn);
-  overflow: hidden;
+  gap: 4px;
 }
 .ayah-jump-input {
-  width: 26px;
-  background: transparent;
-  border: none;
+  width: 36px;
+  background: var(--parchment);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
   outline: none;
-  color: var(--ink);
-  padding: 5px 2px;
+  color: var(--ink-mid);
+  padding: 3px 4px;
   font-family: 'DM Sans', sans-serif;
   font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
   text-align: center;
   -moz-appearance: textfield;
   appearance: textfield;
+  flex-shrink: 0;
 }
+.ayah-jump-input:focus { border-color: var(--accent); color: var(--ink); }
 .ayah-jump-input::-webkit-inner-spin-button,
 .ayah-jump-input::-webkit-outer-spin-button { -webkit-appearance: none; }
 .ayah-jump-input::placeholder { color: var(--ink-dim); font-weight: 400; }
@@ -695,18 +699,22 @@ body.wbw-on .type-bismillah .wbw-label { display: none; }
   color: var(--ink-dim);
   font-size: 11px;
   font-weight: 600;
-  padding: 0 1px;
+  padding: 0;
 }
 .ayah-jump-btn {
   background: var(--fill-bg);
-  border: none;
+  border: 1.5px solid var(--fill-bg);
   color: #F4F1EA;
-  padding: 6px 8px;
-  font-size: 11px;
-  line-height: 1;
+  border-radius: 20px;
+  padding: 3px 9px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.3px;
   cursor: pointer;
   transition: opacity 0.15s;
-  align-self: stretch;
+  flex-shrink: 0;
 }
 .ayah-jump-btn:active { transform: scale(0.97); }
 
@@ -1075,10 +1083,37 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
 }
 
 .sticky-controls .controls {
-  width: 100%;
+  flex: 0 0 auto;
+  width: auto;
   max-width: 620px;
-  margin: 0 auto;
+  margin: 0;
 }
+
+/* header search box (matches WT / ❌ group look) */
+.sticky-controls .search-wrap {
+  flex: 1 1 90px;
+  min-width: 60px;
+  max-width: 170px;
+  align-self: stretch;
+  margin: 0 6px 0 0;
+  display: flex;
+}
+.sticky-controls #search-input {
+  height: 26px;
+  direction: ltr;
+  text-align: left;
+  padding: 0 18px 0 20px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--ink-mid);
+}
+.sticky-controls #search-input::placeholder { color: var(--ink-mid); font-weight: 600; opacity: 0.8; }
+.sticky-controls #search-input.is-arabic { direction: rtl; text-align: right; font-size: 12px; padding: 0 20px; }
+.sticky-controls .search-icon { left: 6px; width: 10px; height: 10px; }
+.sticky-controls .search-wrap.is-arabic .search-icon { left: auto; right: 6px; }
+.sticky-controls .search-clear { right: 4px; width: 14px; height: 14px; font-size: 10px; }
+.sticky-controls .search-wrap.is-arabic .search-clear { right: auto; left: 4px; }
 
 /* ── Nav toggle button ── */
 #nav-toggle {
@@ -1513,6 +1548,15 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
   .topic-detail-ayah:hover { background: var(--accent-light); }
   .show-more-btn:hover { background: var(--accent-light); }
 }
+@media (max-width: 340px) {
+  .card-topbar { gap: 4px; padding: 6px 6px; }
+  .ayah-jump { gap: 2px; }
+  .ayah-jump-input { width: 28px; }
+  .page-input { width: 34px; }
+  .go-btn, .ayah-jump-btn { padding: 3px 6px; }
+  .page-nav-group { gap: 2px; }
+  .page-range { font-size: 9px; }
+}
 </style>
 </head>
 <body>
@@ -1538,6 +1582,17 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
       </div>
     </div>
   </div>
+  <div class="search-wrap">
+    <span class="search-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <circle cx="11" cy="11" r="7.2"></circle>
+        <line x1="21" y1="21" x2="16.4" y2="16.4"></line>
+      </svg>
+    </span>
+    <input type="text" id="search-input" placeholder="Cari…" autocomplete="off" />
+    <button class="search-clear" id="search-clear" title="Clear">&times;</button>
+  </div>
+  <p class="subtitle">Madinah Mushaf - 1405</p>
 </div>
 
 <div class="shell">
@@ -1574,23 +1629,12 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
     </div>
   </div>
 
-  <p class="subtitle">QPC V1 · Madinah Mushaf, 1405H print</p>
 
   <!-- Finder bar: surah search + word search -->
   <div class="finder-bar">
     <div class="surah-select-wrap">
       <input type="text" id="surah-search-input" placeholder="Pilih Surah…" autocomplete="off" />
       <div class="surah-results" id="surah-results"></div>
-    </div>
-    <div class="search-wrap">
-      <span class="search-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-          <circle cx="11" cy="11" r="7.2"></circle>
-          <line x1="21" y1="21" x2="16.4" y2="16.4"></line>
-        </svg>
-      </span>
-      <input type="text" id="search-input" placeholder="Cari perkataan (Melayu / العربية)…" autocomplete="off" />
-      <button class="search-clear" id="search-clear" title="Clear">&times;</button>
     </div>
   </div>
 
@@ -1616,7 +1660,7 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
         <input type="number" class="ayah-jump-input" id="jump-surah" placeholder="Srh" min="1" max="114" />
         <span class="ayah-jump-sep">:</span>
         <input type="number" class="ayah-jump-input" id="jump-ayah" placeholder="Ayt" min="1" />
-        <button class="ayah-jump-btn" id="jump-go-btn" title="Pergi ke ayat">&#8594;</button>
+        <button class="ayah-jump-btn" id="jump-go-btn" title="Pergi ke ayat">Go</button>
       </div>
       <span class="page-nav-group">
         <input type="number" inputmode="numeric" class="page-input" id="page-input" min="1" max="604" value="1" title="Nombor halaman" aria-label="Nombor halaman" />
