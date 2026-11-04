@@ -3668,9 +3668,6 @@ jumpGoBtn.addEventListener("click", jumpToAyah);
   let startTransY   = 0;
   let startMid      = { x: 0, y: 0 };
 
-  // Double-tap state
-  let lastTap = 0;
-
   render.addEventListener("touchstart", e => {
     activeTouches = [...e.touches];
 
@@ -3682,18 +3679,6 @@ jumpGoBtn.addEventListener("click", jumpToAyah);
       startTransX = transX;
       startTransY = transY;
     } else if (activeTouches.length === 1) {
-      // Double-tap detection
-      const now = Date.now();
-      if (!drawModeEnabled && now - lastTap < 300) {
-        e.preventDefault();
-        if (scale !== 1) resetZoom(true);
-        else {
-          scale = 2; transX = 0; transY = 0;
-          applyTransform(true);
-          showBadge("2×");
-        }
-      }
-      lastTap = now;
       // Single-finger pan start (only if zoomed in)
       if (scale > 1) {
         startTransX = transX;
