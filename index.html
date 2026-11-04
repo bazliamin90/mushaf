@@ -1261,6 +1261,53 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
   font-weight: 700;
 }
 .card-bm-btn { top: calc(50% - 32px - 6px - 44px); }
+.card-pin-btn { top: calc(50% - 32px - 6px - 44px - 6px - 44px); font-size: 14px; }
+.history-panel {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 60;
+  width: min(250px, calc(100% - 90px));
+  max-height: 70%;
+  flex-direction: column;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-btn);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  font-family: 'DM Sans', sans-serif;
+  direction: ltr;
+}
+.history-panel.visible { display: flex; }
+.history-panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 8px 6px 10px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 11px; font-weight: 700; color: var(--ink-mid); letter-spacing: 0.3px;
+}
+.history-panel-list { overflow-y: auto; padding: 4px; margin: 0; list-style: none; }
+.history-empty { padding: 12px; font-size: 11px; color: var(--ink-dim); text-align: center; }
+.history-item {
+  display: flex; align-items: center; gap: 3px;
+  padding: 2px; border-radius: 6px;
+}
+.history-item.current { background: var(--accent-light); }
+.history-go {
+  flex: 1 1 auto; min-width: 0;
+  background: transparent; border: none; text-align: left; cursor: pointer;
+  padding: 5px 6px; font-family: inherit; font-size: 11px; font-weight: 600; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.history-go small { font-weight: 500; color: var(--ink-dim); margin-left: 4px; }
+.history-mini {
+  flex: 0 0 auto; width: 22px; height: 22px; padding: 0;
+  background: var(--parchment); border: 1.5px solid var(--border); border-radius: 50%;
+  color: var(--ink-mid); font-size: 10px; line-height: 1; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.history-mini:disabled { opacity: 0.3; cursor: not-allowed; }
+.history-mini:active:not(:disabled) { background: var(--accent-light); color: var(--accent); }
 .card-wbw-btn.active {
   opacity: 1;
   background: var(--accent);
@@ -1696,6 +1743,11 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
       <div id="zoom-badge"></div>
       <div class="edge-label edge-label-next" id="edge-label-next"><span id="edge-label-next-text"></span></div>
       <div class="edge-label edge-label-prev" id="edge-label-prev"><span id="edge-label-prev-text"></span></div>
+      <div class="history-panel" id="history-panel" role="dialog" aria-label="Halaman dilawati">
+        <div class="history-panel-head"><span>📌 Halaman dilawati</span><button class="history-mini" id="history-panel-close" aria-label="Tutup">✕</button></div>
+        <ul class="history-panel-list" id="history-panel-list"></ul>
+      </div>
+      <button class="card-nav-btn card-wbw-btn card-pin-btn" id="pin-btn" aria-pressed="false" title="Senarai halaman yang dilawati" aria-label="Senarai halaman yang dilawati">📌</button>
       <button class="card-nav-btn card-wbw-btn card-bm-btn" id="trans-toggle" aria-pressed="false" title="Terjemahan Bahasa Melayu (BM)" aria-label="Terjemahan Bahasa Melayu">T</button>
       <button class="card-nav-btn card-nav-prev" id="card-prev-btn" title="Halaman sebelum" aria-label="Halaman sebelum">&#8249;</button>
       <button class="card-nav-btn card-nav-next" id="card-next-btn" title="Halaman berikut" aria-label="Halaman berikut">&#8250;</button>
@@ -1893,8 +1945,19 @@ cardNextBtn.addEventListener("click", () => { if (currentPage < 604) goToPage(cu
    Distinct from the page-turn arrows above: this remembers every page you've
    actually navigated *to* (via search, jump-to-ayah, topics, etc.) so you can
    retrace your steps — e.g. 100 → 250 → 300, then Back: 300 → 250 → 100. */
+const NAV_HISTORY_KEY = "mushaf_nav_history";
 let navHistory = [];
 let navIndex = -1;
+try {
+  const saved = JSON.parse(localStorage.getItem(NAV_HISTORY_KEY) || "null");
+  if (saved && Array.isArray(saved.list)) {
+    navHistory = saved.list.filter(n => Number.isInteger(n) && n >= 1 && n <= 604).slice(-200);
+    navIndex = Math.min(Math.max(parseInt(saved.index, 10) || 0, -1), navHistory.length - 1);
+  }
+} catch (e) { /* storage unavailable or corrupt — start fresh */ }
+function saveNavHistory() {
+  try { localStorage.setItem(NAV_HISTORY_KEY, JSON.stringify({ list: navHistory, index: navIndex })); } catch (e) {}
+}
 let suppressHistoryPush = false;
 const historyBackBtn = document.getElementById("history-back-btn");
 const historyNextBtn = document.getElementById("history-next-btn");
@@ -1922,6 +1985,83 @@ function historyForward() {
 
 historyBackBtn.addEventListener("click", historyBack);
 historyNextBtn.addEventListener("click", historyForward);
+
+/* ── Visited-pages list (📌): jump, reorder, delete ── */
+const pinBtn = document.getElementById("pin-btn");
+const historyPanel = document.getElementById("history-panel");
+const historyPanelList = document.getElementById("history-panel-list");
+
+function renderHistoryPanel() {
+  if (!historyPanel.classList.contains("visible")) return;
+  historyPanelList.textContent = "";
+  if (!navHistory.length) {
+    const li = document.createElement("li");
+    li.className = "history-empty";
+    li.textContent = "Belum ada halaman dilawati.";
+    historyPanelList.appendChild(li);
+    return;
+  }
+  navHistory.forEach((page, i) => {
+    const li = document.createElement("li");
+    li.className = "history-item" + (i === navIndex ? " current" : "");
+    const go = document.createElement("button");
+    go.className = "history-go";
+    let name = "";
+    try { const s = surahForPage(page); if (s) name = s[2]; } catch (e) {}
+    go.textContent = `m/s ${page}`;
+    if (name) { const sm = document.createElement("small"); sm.textContent = name; go.appendChild(sm); }
+    go.addEventListener("click", () => {
+      navIndex = i;
+      suppressHistoryPush = true;
+      goToPage(page);
+      suppressHistoryPush = false;
+    });
+    const mk = (txt, label, disabled, fn) => {
+      const b = document.createElement("button");
+      b.className = "history-mini"; b.textContent = txt;
+      b.setAttribute("aria-label", label); b.title = label; b.disabled = disabled;
+      b.addEventListener("click", fn);
+      return b;
+    };
+    li.append(go,
+      mk("▲", "Naik", i === 0, () => moveHistory(i, -1)),
+      mk("▼", "Turun", i === navHistory.length - 1, () => moveHistory(i, 1)),
+      mk("✕", "Padam", false, () => deleteHistory(i)));
+    historyPanelList.appendChild(li);
+  });
+}
+
+function moveHistory(i, d) {
+  const j = i + d;
+  if (j < 0 || j >= navHistory.length) return;
+  [navHistory[i], navHistory[j]] = [navHistory[j], navHistory[i]];
+  if (navIndex === i) navIndex = j; else if (navIndex === j) navIndex = i;
+  updateHistoryButtons(); saveNavHistory(); renderHistoryPanel();
+}
+
+function deleteHistory(i) {
+  navHistory.splice(i, 1);
+  if (i < navIndex) navIndex--;
+  else if (i === navIndex) navIndex = Math.min(navIndex, navHistory.length - 1);
+  updateHistoryButtons(); saveNavHistory(); renderHistoryPanel();
+}
+
+function setHistoryPanel(open) {
+  historyPanel.classList.toggle("visible", open);
+  pinBtn.classList.toggle("active", open);
+  pinBtn.setAttribute("aria-pressed", String(open));
+  if (open) {
+    renderHistoryPanel();
+    const cur = historyPanelList.querySelector(".current");
+    if (cur) cur.scrollIntoView({ block: "nearest" });
+  }
+}
+["pointerdown","touchstart","touchmove","wheel"].forEach(t => historyPanel.addEventListener(t, e => e.stopPropagation(), { passive: true }));
+pinBtn.addEventListener("click", (e) => { e.stopPropagation(); setHistoryPanel(!historyPanel.classList.contains("visible")); });
+document.getElementById("history-panel-close").addEventListener("click", () => setHistoryPanel(false));
+document.addEventListener("pointerdown", (e) => {
+  if (historyPanel.classList.contains("visible") && !historyPanel.contains(e.target) && !pinBtn.contains(e.target)) setHistoryPanel(false);
+});
 
 /* ── Highlighter ── */
 const HIGHLIGHTS_KEY = "mushafHighlights";
@@ -1999,6 +2139,7 @@ clearDataBtn.addEventListener("click", async () => {
     // 1. Clear localStorage (last page read, saved highlights)
     try {
       localStorage.removeItem(LAST_PAGE_KEY);
+      localStorage.removeItem(NAV_HISTORY_KEY);
       localStorage.removeItem(HIGHLIGHTS_KEY);
       localStorage.removeItem(DRAW_KEY);
     } catch (e) { /* storage unavailable — ignore */ }
@@ -2329,6 +2470,8 @@ function goToPage(num) {
     navIndex = navHistory.length - 1;
   }
   updateHistoryButtons();
+  saveNavHistory();
+  renderHistoryPanel();
 
   currentPage = num;
   try { onDrawKeyChange(); } catch (e) { /* drawing layer not ready yet */ }
