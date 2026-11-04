@@ -1286,6 +1286,7 @@ body.wt-on .mushaf-word.tappable { cursor: pointer; }
   border-bottom: 1px solid var(--border-light);
   font-size: 11px; font-weight: 700; color: var(--ink-mid); letter-spacing: 0.3px;
 }
+.history-head-btns { display: flex; gap: 4px; }
 .history-panel-list { overflow-y: auto; padding: 4px; margin: 0; list-style: none; }
 .history-empty { padding: 12px; font-size: 11px; color: var(--ink-dim); text-align: center; }
 .history-item {
@@ -1744,7 +1745,7 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
       <div class="edge-label edge-label-next" id="edge-label-next"><span id="edge-label-next-text"></span></div>
       <div class="edge-label edge-label-prev" id="edge-label-prev"><span id="edge-label-prev-text"></span></div>
       <div class="history-panel" id="history-panel" role="dialog" aria-label="Halaman dilawati">
-        <div class="history-panel-head"><span>📌 Halaman dilawati</span><button class="history-mini" id="history-panel-close" aria-label="Tutup">✕</button></div>
+        <div class="history-panel-head"><span>📌 Halaman dilawati</span><span class="history-head-btns"><button class="history-mini" id="history-panel-clear" title="Padam semua" aria-label="Padam semua"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg></button><button class="history-mini" id="history-panel-close" aria-label="Tutup">✕</button></span></div>
         <ul class="history-panel-list" id="history-panel-list"></ul>
       </div>
       <button class="card-nav-btn card-wbw-btn card-pin-btn" id="pin-btn" aria-pressed="false" title="Senarai halaman yang dilawati" aria-label="Senarai halaman yang dilawati">📌</button>
@@ -2058,6 +2059,12 @@ function setHistoryPanel(open) {
 }
 ["pointerdown","touchstart","touchmove","wheel"].forEach(t => historyPanel.addEventListener(t, e => e.stopPropagation(), { passive: true }));
 pinBtn.addEventListener("click", (e) => { e.stopPropagation(); setHistoryPanel(!historyPanel.classList.contains("visible")); });
+document.getElementById("history-panel-clear").addEventListener("click", () => {
+  if (!navHistory.length) return;
+  if (!confirm("Padam SEMUA halaman dilawati daripada senarai?")) return;
+  navHistory = []; navIndex = -1;
+  updateHistoryButtons(); saveNavHistory(); renderHistoryPanel();
+});
 document.getElementById("history-panel-close").addEventListener("click", () => setHistoryPanel(false));
 document.addEventListener("pointerdown", (e) => {
   if (historyPanel.classList.contains("visible") && !historyPanel.contains(e.target) && !pinBtn.contains(e.target)) setHistoryPanel(false);
