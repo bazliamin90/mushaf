@@ -1621,6 +1621,10 @@ body.draw-on #draw-canvas { pointer-events: auto; touch-action: none; cursor: cr
   .page-range { font-size: 11px; padding: 7px 6px; }
 }
 </style>
+<script>
+/* remember (before the app runs) whether this browser already had user data — used by the update notice */
+try { window.__mushafHadData = !!localStorage.getItem("mushaf_last_page"); } catch (e) { window.__mushafHadData = false; }
+</script>
 </head>
 <body>
 <button id="nav-toggle" title="Tunjuk/sembunyi bar navigasi" aria-label="Toggle navbar">
@@ -2471,10 +2475,12 @@ transToggle.addEventListener("click", () => {
 });
 
 function goToPage(num) {
+  num = Number(num);
   if (!suppressHistoryPush && navHistory[navIndex] !== num) {
-    navHistory = navHistory.slice(0, navIndex + 1); // drop any "redo" branch on a fresh visit
-    navHistory.push(num);
-    navIndex = navHistory.length - 1;
+    // New visit: slot it in right after the current entry. Nothing already in the list is ever discarded.
+    navHistory.splice(navIndex + 1, 0, num);
+    navIndex++;
+    if (navHistory.length > 200) { navHistory.shift(); navIndex--; }
   }
   updateHistoryButtons();
   saveNavHistory();
@@ -3795,6 +3801,7 @@ jumpGoBtn.addEventListener("click", jumpToAyah);
 const initialPage = loadLastPage();
 lastPage = initialPage; // avoid a slide animation on first load
 if (cardPrevBtn) cardPrevBtn.disabled = initialPage <= 1;
+if (navHistory[navIndex] !== initialPage && navHistory.includes(initialPage)) navIndex = navHistory.lastIndexOf(initialPage);
 goToPage(initialPage);
 
 /* ════════════════════════════════════════════════════
@@ -4095,6 +4102,84 @@ document.getElementById("share-ayah-btn").addEventListener("click", (e) => {
     register();
   } else {
     window.addEventListener("load", register);
+  }
+})();
+</script>
+<script>
+/* ── Update notice (v2.0) ──
+   Shows "installing…" while an update is applied, then a notice the user must close with ✕. */
+(function () {
+  const APP_VERSION = "2.0";
+  const VERSION_KEY = "mushaf_app_version";
+  let box = null;
+
+  function ensureBox() {
+    if (box) return box;
+    box = document.createElement("div");
+    box.id = "update-notice";
+    box.setAttribute("role", "status");
+    box.style.cssText =
+      "position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:10000;" +
+      "width:min(340px,calc(100vw - 24px));box-sizing:border-box;display:flex;align-items:center;gap:10px;" +
+      "background:#2E4A3E;color:#FBF6E6;font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.35;" +
+      "padding:10px 12px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.35);direction:ltr;";
+    document.body.appendChild(box);
+    return box;
+  }
+  function showInstalling() {
+    const b = ensureBox();
+    b.textContent = "⏳ Kemas kini baharu sedang dipasang… Sila tunggu sebentar.";
+  }
+  function showDone() {
+    const b = ensureBox();
+    b.textContent = "";
+    const msg = document.createElement("span");
+    msg.style.flex = "1";
+    msg.textContent = "✅ Aplikasi telah dikemas kini ke v" + APP_VERSION + ". Selamat menggunakan!";
+    const x = document.createElement("button");
+    x.type = "button";
+    x.textContent = "✕";
+    x.setAttribute("aria-label", "Tutup");
+    x.style.cssText = "flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:1.5px solid #FBF6E6;" +
+      "background:transparent;color:#FBF6E6;font-size:13px;line-height:1;cursor:pointer;padding:0;";
+    x.addEventListener("click", () => { b.remove(); box = null; });
+    b.append(msg, x);
+  }
+  function rememberVersion() { try { localStorage.setItem(VERSION_KEY, APP_VERSION); } catch (e) {} }
+
+  async function refreshShell() {
+    // Re-fetch the app files so the offline copy matches this version (the data under ./data is untouched).
+    const get = (u) => Promise.race([
+      fetch(u, { cache: "reload" }).catch(() => null),
+      new Promise((r) => setTimeout(r, 8000)),
+    ]);
+    await Promise.all([get("./index.html"), get("./manifest.json")]);
+  }
+
+  let stored = null;
+  try { stored = localStorage.getItem(VERSION_KEY); } catch (e) {}
+  if (stored !== APP_VERSION) {
+    if (stored === null && !window.__mushafHadData) {
+      rememberVersion(); // brand-new install: nothing to announce
+    } else {
+      showInstalling();
+      refreshShell().then(() => { rememberVersion(); showDone(); });
+    }
+  }
+
+  // A changed service worker (sw.js) is also reported.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistration().then((reg) => {
+      if (!reg) return;
+      reg.addEventListener("updatefound", () => {
+        const w = reg.installing;
+        if (!w || !navigator.serviceWorker.controller) return; // first install is covered by the offline-data banner
+        showInstalling();
+        w.addEventListener("statechange", () => {
+          if (w.state === "activated" || w.state === "installed") { rememberVersion(); showDone(); }
+        });
+      });
+    }).catch(() => {});
   }
 })();
 </script>
